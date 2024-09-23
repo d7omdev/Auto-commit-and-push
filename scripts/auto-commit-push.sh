@@ -1,21 +1,27 @@
 #!/bin/bash
 
+# Define the working directory where the repository is located
+# TODO: Modify this to the path of your repository
+WORKING_DIR="$HOME/Temp/Auto-Commit-and-push/"
+
+# Enable or disable logging (true to enable, false to disable)
+LOGGING_ENABLED=true # NOTE: Set to false to disable logging
+
 # Define log files
-
-WORING_DIR="$HOME/Temp/Auto-Commit-and-push/"
-
-LOG_DIR="$WORING_DIR/logs"
+LOG_DIR="$WORKING_DIR/logs"
 NOTHING_CHANGED_LOG="$LOG_DIR/nothing_changed.log"
 COMMITS_LOG="$LOG_DIR/commits.log"
 
 # Create log directory if it doesn't exist
-mkdir -p "$LOG_DIR"
+if [ "$LOGGING_ENABLED" = true ]; then
+    mkdir -p "$LOG_DIR"
+fi
 
 # Navigate to your repository directory
-cd $WORING_DIR || exit
+cd "$WORKING_DIR" || exit
 
 # Add all changes excluding the logs directory
-git add $(git ls-files -mo --exclude="$LOG_DIR/*")
+git add -- $(git ls-files -mo --exclude="$LOG_DIR/*")
 
 # Check if there are any changes to commit excluding the logs directory
 if ! git diff --cached --quiet -- . ":(exclude)$LOG_DIR/*"; then
@@ -33,20 +39,27 @@ $CHANGED_FILES"
     # Commit the changes with the formatted message
     git commit -m "$COMMIT_MESSAGE"
 
-    # Rename the default branch from master to main
-    git branch -m main
+    # Rename the default branch from master to main if necessary
+    CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+    if [ "$CURRENT_BRANCH" = "master" ]; then
+        git branch -m main
+    fi
 
     # Push the changes to the remote repository
     git push origin main
 
     # Log the commit and changed files
-    {
-        echo "Commit on $CURRENT_DATE"
-        echo "Changed files:"
-        echo "$CHANGED_FILES"
-        echo "--------------------------"
-    } >>"$COMMITS_LOG"
+    if [ "$LOGGING_ENABLED" = true ]; then
+        {
+            echo "Commit on $CURRENT_DATE"
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+            echo "--------------------------"
+        } >>"$COMMITS_LOG"
+    fi
 else
     # Log if no changes at all
-    echo "No changes to commit on $(date +"%Y-%m-%d %H:%M:%S")" >>"$NOTHING_CHANGED_LOG"
+    if [ "$LOGGING_ENABLED" = true ]; then
+        echo "No changes to commit on $(date +"%Y-%m-%d %H:%M:%S")" >>"$NOTHING_CHANGED_LOG"
+    fi
 fi
